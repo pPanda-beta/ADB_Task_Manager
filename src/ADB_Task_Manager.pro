@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
+QT += printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -19,9 +20,11 @@ CONFIG += C++1y
 QMAKE_LINK += -shared-libgcc
 
 SOURCES += main.cpp\
-        MainWindow.cpp
+        MainWindow.cpp \
+    qcustomplot.cpp
 
-HEADERS  += MainWindow.h
+HEADERS  += MainWindow.h \
+    qcustomplot.h
 
 FORMS    += MainWindow.ui
 

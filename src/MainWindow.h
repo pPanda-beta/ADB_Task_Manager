@@ -14,6 +14,8 @@
 #include <QProcess>
 #include <QSemaphore>
 
+#include "qcustomplot.h"
+
 using namespace std;
 namespace Ui {
 class MainWindow;
@@ -27,7 +29,7 @@ public:
 	explicit MainWindow(QWidget *parent = 0);
 	~MainWindow();
 	
-	int m_nop,m_del;
+	int m_nop,m_del,u_u,s_u,mxX=25;
 	std::thread ipc;
 	std::mutex mt;
 	atomic<int> running,mode;
@@ -37,6 +39,7 @@ public:
 	QSemaphore sem;
 	QString bl;
 	
+	QVector<double> ks,vs[2];
 	void restarttopProc();
 private slots:
 	void on_tableWidget_cellActivated(int row, int column);
