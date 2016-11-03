@@ -1,3 +1,7 @@
+
+
+
+
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 
@@ -5,7 +9,6 @@ int threads=0;
 thread_local int tid=++threads;
 
 #define g qDebug()<<"\nDebug["<<tid<<"] @ "<<" #"<<__LINE__<<"\t"<<__PRETTY_FUNCTION__ ;
-
 
 
 
@@ -40,6 +43,21 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->tableWidget->setColumnCount(header.size());
 	ui->tableWidget->setHorizontalHeaderLabels(header);
 	
+
+	ui->Perf->xAxis->setLabel("Time -> ");
+	ui->Perf->yAxis->setLabel("Cpu util %");
+	ui->Perf->xAxis->setRange(1,mxX);
+	ui->Perf->yAxis->setRange(0,100.0);
+	
+	ui->Perf->addGraph(ui->Perf->xAxis,ui->Perf->yAxis);
+	ui->Perf->graph(0)->setBrush(QColor(100,100,255,100));
+	ui->Perf->graph(0)->setName("Total");
+	
+	ui->Perf->addGraph(ui->Perf->xAxis,ui->Perf->yAxis);
+	ui->Perf->graph(1)->setBrush(QColor(0,0,255,100));
+	ui->Perf->graph(1)->setName("Kernel");
+	
+
 	g
 	ipc=std::thread ([&]
 	{
@@ -63,7 +81,7 @@ MainWindow::MainWindow(QWidget *parent) :
 				qDebug()<<qtop->state()<<":"<<cmd.str().data();
 				
 			}
-			
+
 			
 			QString ln;
 			{
@@ -76,16 +94,21 @@ MainWindow::MainWindow(QWidget *parent) :
 				ln=qtop->readLine();
 			}
 			bool isBlank=ln.trimmed().isEmpty();
-		//	qDebug()<<ln<<" vs "<<isBlank;
-		//	qDebug()<<"Mode begin :"<<mode;
+//			qDebug()<<ln<<" vs "<<isBlank;
+	//		qDebug()<<"Mode begin :"<<mode;
 				
 			switch(mode)
 			{
 				case 0 :
-						if(not isBlank)
-							mode=(mode+1)%4;
-						else
+						if(isBlank)
 							break;
+						else
+						{
+							mode=(mode+1)%4;
+							auto &&row=ln.split(QRegExp("\\s+|%|,"),QString::SkipEmptyParts);
+							u_u=row[1].toInt();//stoi(row[1].toStdString());
+							s_u=row[3].toInt();//stoi(row[3].toStdString());
+						}
 				case 1 :
 					bl=ln;
 					mode=(mode+1)%4;					
@@ -107,7 +130,13 @@ MainWindow::MainWindow(QWidget *parent) :
 						mode=(mode+1)%4;
 						QMetaObject::invokeMethod(ui->tableWidget,"cellActivated",
 												  Qt::QueuedConnection,Q_ARG(int,-1),Q_ARG(int,-1));
-					
+						if(ks.size()<mxX)
+							ks.push_back(ks.size()+1);
+						vs[0].push_back((double)u_u+s_u);
+						vs[1].push_back((double)s_u);
+						while(vs[0].size()>mxX)
+							for(auto &vl:vs)
+								vl.pop_front();
 						sem.acquire();
 						ll.clear();
 					}
@@ -145,11 +174,16 @@ void MainWindow::on_tableWidget_cellActivated(int row, int column)
     if(row < 0 and column < 0 and running)
 	{
 		setDataset(ui->tableWidget,ll);
-
 		
 		ui->tableWidget->resizeColumnsToContents();
 		ui->tableWidget->resizeRowsToContents();
 		ui->statusBar->showMessage(bl);
+		
+		for(size_t i=0;i<sizeof(vs)/sizeof(vs[0]);i++)
+			ui->Perf->graph(i)->setData(ks,vs[i],true);
+		
+		ui->Perf->replot();
+	
 		sem.release();
 	}
 }
